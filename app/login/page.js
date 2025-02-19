@@ -2,11 +2,12 @@
 
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, Suspense } from 'react';
 import gsap from 'gsap';
 import Navbar from '@/Components/Navbar';
 
-export default function LoginPage() {
+// Create a client component that uses useSearchParams
+const LoginContent = () => {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   
@@ -140,5 +141,14 @@ export default function LoginPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+// Main page component
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
