@@ -134,9 +134,24 @@ export default function HomePage() {
               ref={ctaRef}
               className="inline-block relative px-8 py-4 text-xl font-semibold overflow-hidden group"
             >
-              <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 transition-all duration-300 group-hover:scale-110"></span>
-              <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-50 blur-xl transition-all duration-300 group-hover:scale-110"></span>
-              <span className="relative text-white">Start Your Journey Now →</span>
+              <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 transition-all duration-500 group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:via-purple-600 group-hover:to-pink-600 ease-out"></span>
+              <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-50 blur-xl transition-all duration-500 group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:via-purple-600 group-hover:to-pink-600 group-hover:opacity-70 ease-out"></span>
+              <span className="relative text-white flex items-center gap-2">
+                Start Your Journey Now
+                <svg 
+                  className="w-5 h-5 transform transition-transform duration-300 group-hover:translate-x-1" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M17 8l4 4m0 0l-4 4m4-4H3" 
+                  />
+                </svg>
+              </span>
             </Link>
           </div>
         </div>
