@@ -148,8 +148,8 @@ export default function Navbar() {
                 href="/login"
                 className="relative px-6 py-2.5 text-white overflow-hidden group"
               >
-                <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-50 group-hover:opacity-70 transition-opacity duration-300"></span>
-                <span className="relative">Connect Wallet</span>
+                {/* <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-50 group-hover:opacity-70 transition-opacity duration-300"></span> */}
+                {/* <span className="relative">Connect Wallet</span> */}
               </Link>
             )}
           </div>
