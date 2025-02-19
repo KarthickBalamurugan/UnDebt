@@ -5,8 +5,19 @@ import Navbar from '@/Components/Navbar';
 import Image from 'next/image';
 
 export default function CalculatorPage() {
+  // User Details State
+  const [userDetails, setUserDetails] = useState({
+    fullName: '',
+    occupation: '',
+    monthlySalary: '',
+    companyName: '',
+    workExperience: '',
+    numberOfLoans: '1', // Default to 1 loan
+  });
+
+  // Loans State with Dynamic Number of Loans
   const [loans, setLoans] = useState([]);
-  const [formData, setFormData] = useState({
+  const [loanForms, setLoanForms] = useState([{
     debtName: '',
     principalAmount: '',
     interestRate: '',
@@ -15,7 +26,7 @@ export default function CalculatorPage() {
     loanType: 'personal',
     aadharNumber: '',
     panNumber: ''
-  });
+  }]);
 
   const titleRef = useRef(null);
   const formRef = useRef(null);
@@ -47,42 +58,184 @@ export default function CalculatorPage() {
     });
   }, []);
 
-  const handleInputChange = (e) => {
+  // Add this validation function at the top of your component
+  const validateForm = (userDetails, loanForms) => {
+    // Validate user details
+    if (userDetails.monthlySalary <= 0) {
+      alert('Monthly salary must be greater than 0');
+      return false;
+    }
+
+    if (userDetails.workExperience < 0) {
+      alert('Work experience cannot be negative');
+      return false;
+    }
+
+    if (parseInt(userDetails.numberOfLoans) < 1 || parseInt(userDetails.numberOfLoans) > 10) {
+      alert('Number of loans must be between 1 and 10');
+      return false;
+    }
+
+    // Validate each loan form
+    for (let i = 0; i < loanForms.length; i++) {
+      const loan = loanForms[i];
+
+      if (!loan.debtName.trim()) {
+        alert(`Loan ${i + 1}: Debt name is required`);
+        return false;
+      }
+
+      if (loan.principalAmount <= 0) {
+        alert(`Loan ${i + 1}: Principal amount must be greater than 0`);
+        return false;
+      }
+
+      if (loan.interestRate <= 0 || loan.interestRate > 100) {
+        alert(`Loan ${i + 1}: Interest rate must be between 0 and 100`);
+        return false;
+      }
+
+      if (loan.loanDuration <= 0) {
+        alert(`Loan ${i + 1}: Loan duration must be greater than 0`);
+        return false;
+      }
+
+      if (loan.minimumPayment <= 0) {
+        alert(`Loan ${i + 1}: Minimum payment must be greater than 0`);
+        return false;
+      }
+
+      // Validate Aadhar Number (12 digits)
+      if (!/^\d{12}$/.test(loan.aadharNumber)) {
+        alert(`Loan ${i + 1}: Please enter a valid 12-digit Aadhar number`);
+        return false;
+      }
+
+      // Validate PAN Number (ABCDE1234F format)
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(loan.panNumber)) {
+        alert(`Loan ${i + 1}: Please enter a valid PAN number in format ABCDE1234F`);
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  // Handle User Details Change
+  const handleUserDetailsChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    
+    // Validate number of loans
+    if (name === 'numberOfLoans') {
+      if (value < 1) {
+        alert('Number of loans must be at least 1');
+        return;
+      }
+      if (value > 10) {
+        alert('Maximum 10 loans allowed');
+        return;
+      }
+    }
+
+    // Validate monthly salary
+    if (name === 'monthlySalary' && value < 0) {
+      alert('Salary cannot be negative');
+      return;
+    }
+
+    // Validate work experience
+    if (name === 'workExperience' && value < 0) {
+      alert('Work experience cannot be negative');
+      return;
+    }
+
+    setUserDetails(prev => ({
       ...prev,
       [name]: value
     }));
+
+    // If number of loans changes, update loan forms
+    if (name === 'numberOfLoans') {
+      const newCount = parseInt(value) || 0;
+      setLoanForms(prev => {
+        const newForms = [...prev];
+        if (newCount > prev.length) {
+          // Add more forms
+          for (let i = prev.length; i < newCount; i++) {
+            newForms.push({
+              debtName: '',
+              principalAmount: '',
+              interestRate: '',
+              loanDuration: '',
+              minimumPayment: '',
+              loanType: 'personal',
+              aadharNumber: '',
+              panNumber: ''
+            });
+          }
+        } else {
+          // Remove excess forms
+          return newForms.slice(0, newCount);
+        }
+        return newForms;
+      });
+    }
   };
 
-  const handleFileChange = (e) => {
-    const { name, files } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: files[0]
-    }));
+  // Handle Loan Form Changes
+  const handleLoanFormChange = (index, e) => {
+    const { name, value } = e.target;
+
+    // Validate numeric fields
+    if (['principalAmount', 'minimumPayment'].includes(name) && value < 0) {
+      alert('Amount cannot be negative');
+      return;
+    }
+
+    if (name === 'interestRate' && (value < 0 || value > 100)) {
+      alert('Interest rate must be between 0 and 100');
+      return;
+    }
+
+    if (name === 'loanDuration' && value < 1) {
+      alert('Loan duration must be at least 1 month');
+      return;
+    }
+
+    // Validate Aadhar number format
+    if (name === 'aadharNumber' && value.length === 12 && !/^\d+$/.test(value)) {
+      alert('Aadhar number must contain only digits');
+      return;
+    }
+
+    // Validate PAN number format
+    if (name === 'panNumber' && value.length === 10 && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value)) {
+      alert('Invalid PAN number format');
+      return;
+    }
+
+    setLoanForms(prev => {
+      const newForms = [...prev];
+      newForms[index] = {
+        ...newForms[index],
+        [name]: value
+      };
+      return newForms;
+    });
   };
 
+  // Handle Submit
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Add new loan to the loans array
-    setLoans(prevLoans => [...prevLoans, { ...formData, id: Date.now() }]);
-    
-    // Reset form data in state
-    setFormData({
-      debtName: '',
-      principalAmount: '',
-      interestRate: '',
-      loanDuration: '',
-      minimumPayment: '',
-      loanType: 'personal',
-      aadharNumber: '',
-      panNumber: ''
-    });
 
-    // Reset the entire form using the HTML form API
-    e.target.reset();
+    // Validate form before submission
+    if (!validateForm(userDetails, loanForms)) {
+      return;
+    }
+
+    setLoans(loanForms);
+    console.log('User Details:', userDetails);
+    console.log('Loans:', loanForms);
   };
 
   const deleteLoan = (loanId) => {
@@ -109,141 +262,229 @@ export default function CalculatorPage() {
               </span>
             </h1>
             <p className="text-gray-400 text-lg">
-              Calculate your debt repayment plan
+              Let's start with your details
             </p>
           </div>
 
-          {/* Calculator Form */}
-          <form 
-            ref={formRef}
-            onSubmit={handleSubmit}
-            className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10 mb-12"
-          >
-            <div className="space-y-6">
-              {/* Debt Name */}
-              <div>
-                <label className="block text-gray-300 mb-2">Debt Name</label>
-                <input
-                  type="text"
-                  name="debtName"
-                  value={formData.debtName}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
-                  placeholder="e.g., Home Loan"
-                />
-              </div>
-
-              {/* Principal Amount & Interest Rate */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={handleSubmit}>
+            {/* User Details Section */}
+            <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10 mb-8">
+              <h2 className="text-xl font-semibold text-white mb-6">Personal Details</h2>
+              <div className="space-y-6">
+                {/* Full Name */}
                 <div>
-                  <label className="block text-gray-300 mb-2">Principal Amount</label>
-                  <input
-                    type="number"
-                    name="principalAmount"
-                    value={formData.principalAmount}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
-                    placeholder="₹"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-300 mb-2">Interest Rate (%)</label>
-                  <input
-                    type="number"
-                    name="interestRate"
-                    value={formData.interestRate}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
-                    placeholder="%"
-                    step="0.01"
-                  />
-                </div>
-              </div>
-
-              {/* Loan Duration & Minimum Payment */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-gray-300 mb-2">Loan Duration (months)</label>
-                  <input
-                    type="number"
-                    name="loanDuration"
-                    value={formData.loanDuration}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
-                    placeholder="Months"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-300 mb-2">Minimum Payment</label>
-                  <input
-                    type="number"
-                    name="minimumPayment"
-                    value={formData.minimumPayment}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
-                    placeholder="₹"
-                  />
-                </div>
-              </div>
-
-              {/* Loan Type */}
-              <div className="mb-6">
-                <label className="block text-gray-300 mb-2">Loan Type</label>
-                <select
-                  name="loanType"
-                  value={formData.loanType}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 rounded-xl bg-white/[0.08] border border-white/20 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
-                >
-                  <option value="personal" className="bg-[#1a1a2e]">Personal Loan</option>
-                  <option value="home" className="bg-[#1a1a2e]">Home Loan</option>
-                  <option value="car" className="bg-[#1a1a2e]">Car Loan</option>
-                  <option value="education" className="bg-[#1a1a2e]">Education Loan</option>
-                  <option value="credit-card" className="bg-[#1a1a2e]">Credit Card</option>
-                  <option value="other" className="bg-[#1a1a2e]">Other</option>
-                </select>
-              </div>
-
-              {/* Document Numbers Section */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-gray-300 mb-2">Aadhar Number</label>
+                  <label className="block text-gray-300 mb-2">Full Name</label>
                   <input
                     type="text"
-                    name="aadharNumber"
-                    value={formData.aadharNumber}
-                    onChange={handleInputChange}
-                    placeholder="Enter 12-digit Aadhar number"
-                    maxLength="12"
-                    pattern="\d{12}"
+                    name="fullName"
+                    value={userDetails.fullName}
+                    onChange={handleUserDetailsChange}
                     className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                    required
                   />
-                  <p className="text-xs text-gray-400 mt-1">Format: 123456789012</p>
                 </div>
+
+                {/* Occupation & Salary */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-gray-300 mb-2">Occupation</label>
+                    <input
+                      type="text"
+                      name="occupation"
+                      value={userDetails.occupation}
+                      onChange={handleUserDetailsChange}
+                      className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 mb-2">Monthly Salary</label>
+                    <input
+                      type="number"
+                      name="monthlySalary"
+                      value={userDetails.monthlySalary}
+                      onChange={handleUserDetailsChange}
+                      className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                      placeholder="₹"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Company & Experience */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-gray-300 mb-2">Company Name</label>
+                    <input
+                      type="text"
+                      name="companyName"
+                      value={userDetails.companyName}
+                      onChange={handleUserDetailsChange}
+                      className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 mb-2">Work Experience (years)</label>
+                    <input
+                      type="number"
+                      name="workExperience"
+                      value={userDetails.workExperience}
+                      onChange={handleUserDetailsChange}
+                      className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Number of Loans */}
                 <div>
-                  <label className="block text-gray-300 mb-2">PAN Number</label>
+                  <label className="block text-gray-300 mb-2">Number of Loans</label>
                   <input
-                    type="text"
-                    name="panNumber"
-                    value={formData.panNumber}
-                    onChange={handleInputChange}
-                    placeholder="Enter 10-digit PAN number"
-                    maxLength="10"
-                    pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}"
-                    className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white uppercase focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                    type="number"
+                    name="numberOfLoans"
+                    value={userDetails.numberOfLoans}
+                    onChange={handleUserDetailsChange}
+                    min="1"
+                    max="10"
+                    className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                    required
                   />
-                  <p className="text-xs text-gray-400 mt-1">Format: ABCDE1234F</p>
                 </div>
               </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                className="w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:from-purple-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-              >
-                Add Loan
-              </button>
             </div>
+
+            {/* Dynamic Loan Forms */}
+            {loanForms.map((loan, index) => (
+              <div key={index} className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10 mb-8">
+                <h2 className="text-xl font-semibold text-white mb-6">Loan {index + 1}</h2>
+                <div className="space-y-6">
+                  {/* Debt Name */}
+                  <div>
+                    <label className="block text-gray-300 mb-2">Debt Name</label>
+                    <input
+                      type="text"
+                      name="debtName"
+                      value={loan.debtName}
+                      onChange={(e) => handleLoanFormChange(index, e)}
+                      className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                      placeholder="e.g., Home Loan"
+                    />
+                  </div>
+
+                  {/* Principal Amount & Interest Rate */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-gray-300 mb-2">Principal Amount</label>
+                      <input
+                        type="number"
+                        name="principalAmount"
+                        value={loan.principalAmount}
+                        onChange={(e) => handleLoanFormChange(index, e)}
+                        className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                        placeholder="₹"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 mb-2">Interest Rate (%)</label>
+                      <input
+                        type="number"
+                        name="interestRate"
+                        value={loan.interestRate}
+                        onChange={(e) => handleLoanFormChange(index, e)}
+                        className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                        placeholder="%"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Loan Duration & Minimum Payment */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-gray-300 mb-2">Loan Duration (months)</label>
+                      <input
+                        type="number"
+                        name="loanDuration"
+                        value={loan.loanDuration}
+                        onChange={(e) => handleLoanFormChange(index, e)}
+                        className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                        placeholder="Months"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 mb-2">Minimum Payment</label>
+                      <input
+                        type="number"
+                        name="minimumPayment"
+                        value={loan.minimumPayment}
+                        onChange={(e) => handleLoanFormChange(index, e)}
+                        className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                        placeholder="₹"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Loan Type */}
+                  <div className="mb-6">
+                    <label className="block text-gray-300 mb-2">Loan Type</label>
+                    <select
+                      name="loanType"
+                      value={loan.loanType}
+                      onChange={(e) => handleLoanFormChange(index, e)}
+                      className="w-full px-4 py-3 rounded-xl bg-white/[0.08] border border-white/20 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                    >
+                      <option value="personal" className="bg-[#1a1a2e]">Personal Loan</option>
+                      <option value="home" className="bg-[#1a1a2e]">Home Loan</option>
+                      <option value="car" className="bg-[#1a1a2e]">Car Loan</option>
+                      <option value="education" className="bg-[#1a1a2e]">Education Loan</option>
+                      <option value="credit-card" className="bg-[#1a1a2e]">Credit Card</option>
+                      <option value="other" className="bg-[#1a1a2e]">Other</option>
+                    </select>
+                  </div>
+
+                  {/* Document Numbers Section */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-gray-300 mb-2">Aadhar Number</label>
+                      <input
+                        type="text"
+                        name="aadharNumber"
+                        value={loan.aadharNumber}
+                        onChange={(e) => handleLoanFormChange(index, e)}
+                        placeholder="Enter 12-digit Aadhar number"
+                        maxLength="12"
+                        pattern="\d{12}"
+                        className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Format: 123456789012</p>
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 mb-2">PAN Number</label>
+                      <input
+                        type="text"
+                        name="panNumber"
+                        value={loan.panNumber}
+                        onChange={(e) => handleLoanFormChange(index, e)}
+                        placeholder="Enter 10-digit PAN number"
+                        maxLength="10"
+                        pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}"
+                        className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white uppercase focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Format: ABCDE1234F</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:from-purple-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            >
+              Calculate Repayment Plan
+            </button>
           </form>
 
           {/* Loans List */}
