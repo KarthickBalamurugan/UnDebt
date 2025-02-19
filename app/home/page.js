@@ -56,12 +56,15 @@ export default function HomePage() {
             Start Your Debt-Free Journey
           </Link>
         </div>
+        <div className='h-screen w-screen'>
+
+        </div>
       </main>
 
       {/* Footer */}
       <footer className="bg-gray-50 py-8">
         <div className="container mx-auto px-4 text-center text-gray-600">
-          <p>© 2024 UnDebt. All rights reserved.</p>
+          <p>© 2025 UnDebt. All rights reserved.</p>
         </div>
       </footer>
     </div>
