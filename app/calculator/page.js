@@ -114,11 +114,11 @@ export default function CalculatorPage() {
         return false;
       }
 
-      // Remove PAN validation
-      // if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(loan.panNumber)) {
-      //   alert(`Loan ${i + 1}: Please enter a valid PAN number in format ABCDE1234F`);
-      //   return false;
-      // }
+      // Validate PAN Number (ABCDE1234F format)
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(loan.panNumber)) {
+        alert(`Loan ${i + 1}: Please enter a valid PAN number in format ABCDE1234F`);
+        return false;
+      }
     }
 
     return true;
@@ -211,11 +211,11 @@ export default function CalculatorPage() {
       return;
     }
 
-    // Remove PAN validation
-    // if (name === 'panNumber' && value.length === 10 && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value)) {
-    //   alert('Invalid PAN number format');
-    //   return;
-    // }
+    // Validate PAN number format
+    if (name === 'panNumber' && value.length === 10 && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value)) {
+      alert('Invalid PAN number format');
+      return;
+    }
 
     setLoanForms(prev => {
       const newForms = [...prev];
@@ -491,6 +491,8 @@ export default function CalculatorPage() {
                         value={loan.panNumber}
                         onChange={(e) => handleLoanFormChange(index, e)}
                         placeholder="Enter 10-digit PAN number"
+                        // maxLength="10"
+                        // pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}" 
                         className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white uppercase focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
                       />
                       <p className="text-xs text-gray-400 mt-1">Format: ABCDE1234F</p>
