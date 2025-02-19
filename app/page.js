@@ -1,10 +1,11 @@
 import LoginPage from "@/Components/LoginPage";
-const page = () => {
+
+const Page = () => {
   return (
-    <>
+    <div>
       <LoginPage />
-    </>
+    </div>
   )
 }
 
-export default page
+export default Page
