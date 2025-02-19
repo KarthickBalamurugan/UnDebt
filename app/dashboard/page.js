@@ -1,105 +1,129 @@
 'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import axios from 'axios';
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
-} from 'recharts';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Navbar from '@/Components/Navbar';
 
 export default function Dashboard() {
-  const router = useRouter();
-  const [formData, setFormData] = useState({ name: '', loans: [{ debtName: '', principalAmount: '', interestRate: '', minimumPayment: '' }] });
-  const [processing, setProcessing] = useState(false);
-  const [data, setData] = useState(null);
+  const [calculationData, setCalculationData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const searchParams = useSearchParams();
+  const calculationId = searchParams.get('id');
 
-  const handleInputChange = (index, field, value) => {
-    const updatedLoans = [...formData.loans];
-    updatedLoans[index][field] = value;
-    setFormData({ ...formData, loans: updatedLoans });
-  };
+  useEffect(() => {
+    const fetchCalculation = async () => {
+      try {
+        const response = await fetch(`/api/calculations/${calculationId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch calculation data');
+        }
+        const data = await response.json();
+        setCalculationData(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const addLoan = () => {
-    setFormData({ ...formData, loans: [...formData.loans, { debtName: '', principalAmount: '', interestRate: '', minimumPayment: '' }] });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setProcessing(true);
-    try {
-      const response = await axios.post('/api/calculate', formData, { onDownloadProgress: (progressEvent) => {} });
-      setData(response.data);
-    } catch (error) {
-      console.error('Error:', error);
+    if (calculationId) {
+      fetchCalculation();
     }
-    setProcessing(false);
-  };
+  }, [calculationId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0118]">
+        <Navbar />
+        <div className="container mx-auto px-4 pt-32">
+          <div className="text-white text-center">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#0A0118]">
+        <Navbar />
+        <div className="container mx-auto px-4 pt-32">
+          <div className="text-red-500 text-center">{error}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Debt Repayment Dashboard</h1>
+    <div className="min-h-screen bg-[#0A0118]">
+      <Navbar />
+      <div className="container mx-auto px-4 pt-32">
+        {calculationData && (
+          <div className="max-w-4xl mx-auto">
+            {/* User Details Section */}
+            <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10 mb-8">
+              <h2 className="text-2xl font-bold text-white mb-6">Personal Details</h2>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-gray-400">Full Name</p>
+                  <p className="text-white text-lg">{calculationData.userDetails.fullName}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Occupation</p>
+                  <p className="text-white text-lg">{calculationData.userDetails.occupation}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Monthly Salary</p>
+                  <p className="text-white text-lg">₹{calculationData.userDetails.monthlySalary}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Company</p>
+                  <p className="text-white text-lg">{calculationData.userDetails.companyName}</p>
+                </div>
+              </div>
+            </div>
 
-      {/* Form to collect data */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Enter User and Loan Details</h2>
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="User Name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="border p-2 w-full rounded"
-            required
-          />
-        </div>
-
-        {formData.loans.map((loan, index) => (
-          <div key={index} className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            {['debtName', 'principalAmount', 'interestRate', 'minimumPayment'].map((field) => (
-              <input
-                key={field}
-                type={field === 'debtName' ? 'text' : 'number'}
-                placeholder={field.replace(/([A-Z])/g, ' $1').trim()}
-                value={loan[field]}
-                onChange={(e) => handleInputChange(index, field, e.target.value)}
-                className="border p-2 rounded"
-                required
-              />
-            ))}
-          </div>
-        ))}
-        <button type="button" onClick={addLoan} className="bg-blue-500 text-white px-4 py-2 rounded">Add Loan</button>
-        <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded ml-4" disabled={processing}>
-          {processing ? 'Processing...' : 'Calculate'}
-        </button>
-      </form>
-
-      {/* Loading Indicator */}
-      {processing && <p className="text-center text-lg font-semibold">Calculating repayment schedule...</p>}
-
-      {/* Chart Visualization */}
-      {data && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Debt Payoff Progress</h2>
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={data.avalanche.schedule}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              {data.avalanche.schedule[0]?.payments?.map((_, index) => (
-                <Line
+            {/* Loans Section */}
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-white mb-6">Loan Details</h2>
+              {calculationData.loans.map((loan, index) => (
+                <div 
                   key={index}
-                  type="monotone"
-                  dataKey={`payments[${index}].remainingBalance`}
-                  stroke={`hsl(${index * 137.5}, 70%, 50%)`}
-                  strokeWidth={2}
-                />
+                  className="bg-white/[0.03] backdrop-blur-xl rounded-xl p-6 border border-white/10"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-xl font-semibold text-white mb-2">
+                        {loan.debtName}
+                      </h3>
+                      <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-200 text-sm">
+                        {loan.loanType.charAt(0).toUpperCase() + loan.loanType.slice(1)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-400">Principal</p>
+                      <p className="text-white">₹{loan.principalAmount}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Interest Rate</p>
+                      <p className="text-white">{loan.interestRate}%</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Duration</p>
+                      <p className="text-white">{loan.loanDuration} months</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Min. Payment</p>
+                      <p className="text-white">₹{loan.minimumPayment}</p>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

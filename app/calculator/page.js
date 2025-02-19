@@ -6,28 +6,39 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function CalculatorPage() {
-  // User Details State
+  // Update initial user details with sample data
   const [userDetails, setUserDetails] = useState({
-    fullName: '',
-    occupation: '',
-    monthlySalary: '',
-    companyName: '',
-    workExperience: '',
-    numberOfLoans: '1', // Default to 1 loan
+    fullName: 'John Doe',
+    occupation: 'Software Engineer',
+    monthlySalary: '75000',
+    companyName: 'Tech Corp',
+    workExperience: '5',
+    numberOfLoans: '2', // Set to 2 loans for testing
   });
 
-  // Loans State with Dynamic Number of Loans
-  const [loans, setLoans] = useState([]);
-  const [loanForms, setLoanForms] = useState([{
-    debtName: '',
-    principalAmount: '',
-    interestRate: '',
-    loanDuration: '',
-    minimumPayment: '',
-    loanType: 'personal',
-    aadharNumber: '',
-    panNumber: ''
-  }]);
+  // Update initial loan forms with sample data
+  const [loanForms, setLoanForms] = useState([
+    {
+      debtName: 'Home Loan',
+      principalAmount: '2000000',
+      interestRate: '8.5',
+      loanDuration: '240',
+      minimumPayment: '20000',
+      loanType: 'home',
+      aadharNumber: '123456789012',
+      panNumber: 'ABCDE1234F'
+    },
+    {
+      debtName: 'Car Loan',
+      principalAmount: '500000',
+      interestRate: '10.5',
+      loanDuration: '60',
+      minimumPayment: '12000',
+      loanType: 'car',
+      aadharNumber: '987654321012',
+      panNumber: 'ZYXWV9876G'
+    }
+  ]);
 
   const titleRef = useRef(null);
   const formRef = useRef(null);
@@ -252,10 +263,10 @@ export default function CalculatorPage() {
         throw new Error('Failed to calculate');
       }
 
-      const results = await response.json();
+      const result = await response.json();
       
-      // Redirect to dashboard with results
-      router.push('/dashboard?results=' + encodeURIComponent(JSON.stringify(results)));
+      // Redirect to dashboard with the calculation ID
+      router.push(`/dashboard?id=${result.calculationId}`);
     } catch (error) {
       alert('Failed to calculate repayment plans. Please try again.');
       console.error('Calculation error:', error);
@@ -263,7 +274,7 @@ export default function CalculatorPage() {
   };
 
   const deleteLoan = (loanId) => {
-    setLoans(prevLoans => prevLoans.filter(loan => loan.id !== loanId));
+    setLoanForms(prevLoans => prevLoans.filter(loan => loan.id !== loanId));
   };
 
   return (
@@ -512,13 +523,13 @@ export default function CalculatorPage() {
           </form>
 
           {/* Loans List */}
-          {loans.length > 0 && (
+          {loanForms.length > 0 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-white mb-6">Your Loans</h2>
               <div className="grid gap-6">
-                {loans.map(loan => (
+                {loanForms.map((loan, index) => (
                   <div 
-                    key={loan.id}
+                    key={index}
                     className="bg-white/[0.03] backdrop-blur-xl rounded-xl p-6 border border-white/10 hover:border-purple-500/30 transition-all duration-300"
                   >
                     <div className="flex justify-between items-start mb-4">
@@ -568,12 +579,12 @@ export default function CalculatorPage() {
                   <div>
                     <p className="text-gray-400">Total Debt</p>
                     <p className="text-2xl font-bold text-white">
-                      ₹{loans.reduce((sum, loan) => sum + Number(loan.principalAmount), 0)}
+                      ₹{loanForms.reduce((sum, loan) => sum + Number(loan.principalAmount), 0)}
                     </p>
                   </div>
                   <div>
                     <p className="text-gray-400">Number of Loans</p>
-                    <p className="text-2xl font-bold text-white">{loans.length}</p>
+                    <p className="text-2xl font-bold text-white">{loanForms.length}</p>
                   </div>
                 </div>
               </div>
