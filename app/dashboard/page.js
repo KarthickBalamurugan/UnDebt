@@ -20,7 +20,7 @@ import {
 } from 'recharts';
 
 // Colors for pie chart
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c'];
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c', '#ff6b6b', '#4ecdc4'];
 
 // Create a wrapper component for the search params functionality
 function DashboardContent() {
@@ -295,6 +295,32 @@ function DashboardContent() {
     }
   };
 
+  const preparePieData = (loans, monthlySalary) => {
+    // Convert monthly salary to annual for better comparison
+    const annualSalary = parseFloat(monthlySalary) * 12;
+    
+    // Calculate total loan amount
+    const totalLoanAmount = loans.reduce((sum, loan) => 
+      sum + parseFloat(loan.principalAmount), 0
+    );
+
+    // Create data array with income and loans
+    const data = [
+      {
+        name: 'Annual Income',
+        value: annualSalary,
+        category: 'income'
+      },
+      ...loans.map(loan => ({
+        name: loan.debtName,
+        value: parseFloat(loan.principalAmount),
+        category: 'debt'
+      }))
+    ];
+
+    return data;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A0118]">
@@ -316,12 +342,6 @@ function DashboardContent() {
       </div>
     );
   }
-
-  // Prepare data for pie chart
-  const pieData = calculationData?.loans.map(loan => ({
-    name: loan.debtName,
-    value: parseFloat(loan.principalAmount)
-  })) || [];
 
   // Calculate monthly payments data
   const monthlyPaymentsData = calculationData ? calculateMonthlyPayments(calculationData.loans) : [];
@@ -377,28 +397,83 @@ function DashboardContent() {
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-              {/* Loan Distribution Pie Chart */}
+              {/* Income vs Debt Distribution Pie Chart */}
               <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10">
-                <h3 className="text-xl font-semibold text-white mb-4">Loan Distribution</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                <h3 className="text-xl font-semibold text-white mb-4">Income vs Debt Distribution</h3>
+                <div className="mb-4">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={preparePieData(calculationData.loans, calculationData.userDetails.monthlySalary)}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={true}
+                        label={({ name, value, percent }) => 
+                          ` (₹${(value/1000).toFixed(0)}k, ${(percent * 100).toFixed(0)}%)`
+                        }
+                        outerRadius={120}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {preparePieData(calculationData.loans, calculationData.userDetails.monthlySalary)
+                          .map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={entry.category === 'income' ? '#4caf50' : COLORS[index % COLORS.length]}
+                              stroke="rgba(255,255,255,0.1)"
+                              strokeWidth={2}
+                            />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value) => `₹${(value/1000).toFixed(0)}k`}
+                        contentStyle={{
+                          backgroundColor: 'rgba(0,0,0,0.1)',
+                          border: '1px solid rgba(255,255,255,0.9)',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <Legend 
+                        verticalAlign="bottom" 
+                        height={36}
+                        formatter={(value, entry) => (
+                          <span style={{ color: '#fff' }}>{value}</span>
+                        )}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                {/* Add summary statistics */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
+                  <div className="p-4 bg-white/[0.03] rounded-lg border border-white/10">
+                    <p className="text-gray-400 text-sm">Annual Income</p>
+                    <p className="text-green-400 font-bold text-lg">
+                      ₹{(parseFloat(calculationData.userDetails.monthlySalary) * 12).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white/[0.03] rounded-lg border border-white/10">
+                    <p className="text-gray-400 text-sm">Total Debt</p>
+                    <p className="text-red-400 font-bold text-lg">
+                      ₹{calculationData.loans.reduce((sum, loan) => 
+                        sum + parseFloat(loan.principalAmount), 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white/[0.03] rounded-lg border border-white/10">
+                    <p className="text-gray-400 text-sm">Debt-to-Income Ratio</p>
+                    <p className={`font-bold text-lg ${
+                      (calculationData.loans.reduce((sum, loan) => 
+                        sum + parseFloat(loan.principalAmount), 0) / 
+                        (parseFloat(calculationData.userDetails.monthlySalary) * 12)) <= 1 
+                        ? 'text-green-400' 
+                        : 'text-red-400'
+                    }`}>
+                      {((calculationData.loans.reduce((sum, loan) => 
+                        sum + parseFloat(loan.principalAmount), 0) / 
+                        (parseFloat(calculationData.userDetails.monthlySalary) * 12)) * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Balance Progress - Redesigned */}
