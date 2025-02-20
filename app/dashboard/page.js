@@ -537,15 +537,15 @@ function DashboardContent() {
 // Main Dashboard component with Suspense
 export default function Dashboard() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#0A0118]">
-        <Navbar />
+    <div className="min-h-screen bg-[#0A0118]">
+      <Navbar />
+      <Suspense fallback={
         <div className="container mx-auto px-4 pt-32">
           <div className="text-white text-center">Loading...</div>
         </div>
-      </div>
-    }>
-      <DashboardContent />
-    </Suspense>
+      }>
+        <DashboardContent />
+      </Suspense>
+    </div>
   );
 }
