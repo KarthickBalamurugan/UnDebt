@@ -1,21 +1,34 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import Navbar from '@/Components/Navbar';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, BarChart, Bar, RadialBarChart, RadialBar
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  RadialBar,
+  RadialBarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis, YAxis
 } from 'recharts';
 
-export default function Dashboard() {
+// Colors for pie chart
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c'];
+
+// Create a wrapper component for the search params functionality
+function DashboardContent() {
   const [calculationData, setCalculationData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const searchParams = useSearchParams();
   const calculationId = searchParams.get('id');
-
-  // Colors for pie chart
-  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c'];
 
   useEffect(() => {
     const fetchCalculation = async () => {
@@ -579,6 +592,22 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// Main Dashboard component with Suspense
+export default function Dashboard() {
+  return (
+    <div className="min-h-screen bg-[#0A0118]">
+      <Navbar />
+      <Suspense fallback={
+        <div className="container mx-auto px-4 pt-32">
+          <div className="text-white text-center">Loading...</div>
+        </div>
+      }>
+        <DashboardContent />
+      </Suspense>
     </div>
   );
 }
