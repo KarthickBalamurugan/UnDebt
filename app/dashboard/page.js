@@ -200,6 +200,101 @@ function DashboardContent() {
     return strategies;
   };
 
+  // Add this helper function near the top with other calculation functions
+  const calculateEarlyPayoff = (loans, additionalPayments) => {
+    // Calculate scenarios with different additional payment amounts
+    const scenarios = additionalPayments.map(extraAmount => {
+      const loansClone = loans.map(loan => ({
+        ...loan,
+        currentBalance: parseFloat(loan.principalAmount),
+        rate: parseFloat(loan.interestRate),
+        minimumPayment: parseFloat(loan.minimumPayment)
+      }));
+
+      let months = 0;
+      let totalInterestPaid = 0;
+      let totalBalance = loansClone.reduce((sum, loan) => sum + loan.currentBalance, 0);
+      const originalBalance = totalBalance;
+
+      // Distribute extra amount proportionally based on loan balance
+      while (totalBalance > 0 && months < 360) {
+        loansClone.forEach(loan => {
+          if (loan.currentBalance > 0) {
+            // Calculate interest
+            const interest = (loan.currentBalance * loan.rate) / 100 / 12;
+            totalInterestPaid += interest;
+            loan.currentBalance += interest;
+
+            // Calculate extra payment for this loan
+            const loanShare = loan.currentBalance / totalBalance;
+            const extraForLoan = extraAmount * loanShare;
+
+            // Apply payment
+            const totalPayment = Math.min(
+              loan.currentBalance,
+              loan.minimumPayment + extraForLoan
+            );
+            loan.currentBalance -= totalPayment;
+          }
+        });
+
+        totalBalance = loansClone.reduce((sum, loan) => sum + loan.currentBalance, 0);
+        months++;
+      }
+
+      return {
+        extraAmount,
+        months,
+        totalInterestPaid,
+        totalSaved: (originalBalance * months) - totalInterestPaid
+      };
+    });
+
+    return scenarios;
+  };
+
+  // Add this helper function to classify interest burden
+  const getInterestClassification = (totalInterest, salary) => {
+    // Calculate monthly interest
+    const monthlyInterest = totalInterest / 12;
+    // Get percentage of monthly salary
+    const interestToSalaryRatio = (monthlyInterest / parseFloat(salary)) * 100;
+
+    if (interestToSalaryRatio <= 10) {
+      return {
+        level: 'Excellent',
+        color: 'text-green-400',
+        bgColor: 'bg-green-500/10',
+        borderColor: 'border-green-500/20',
+        description: 'Your interest burden is very manageable relative to your income.'
+      };
+    } else if (interestToSalaryRatio <= 20) {
+      return {
+        level: 'Good',
+        color: 'text-blue-400',
+        bgColor: 'bg-blue-500/10',
+        borderColor: 'border-blue-500/20',
+        description: 'Your interest payments are at a reasonable level.'
+      };
+    } else if (interestToSalaryRatio <= 30) {
+      return {
+        level: 'Moderate',
+        color: 'text-yellow-400',
+        bgColor: 'bg-yellow-500/10',
+        borderColor: 'border-yellow-500/20',
+        description: 'Consider ways to reduce your interest burden.'
+      };
+    } else {
+      return {
+        level: 'High',
+        color: 'text-red-400',
+        bgColor: 'bg-red-500/10',
+        borderColor: 'border-red-500/20',
+        description: 'Your interest burden is significant. Consider debt consolidation or refinancing options.'
+      };
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A0118]">
@@ -244,6 +339,12 @@ function DashboardContent() {
   const strategies = calculationData ?
     calculateRepaymentStrategies(calculationData.loans, monthlyBudget) :
     null;
+
+  // In your DashboardContent component, add this before the return statement:
+  const additionalPayments = [0, 5000, 10000, 15000, 20000];
+  const payoffScenarios = calculationData ? 
+    calculateEarlyPayoff(calculationData.loans, additionalPayments) : 
+    [];
 
   return (
     <div className="min-h-screen bg-[#0A0118]">
@@ -484,7 +585,7 @@ function DashboardContent() {
             </div>
 
             {/* Debt Repayment Strategies Comparison */}
-            <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10 mb-8">
+            <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10 mb-8 mt-5">
               <h3 className="text-xl font-semibold text-white mb-4">Debt Repayment Strategy Comparison</h3>
               <ResponsiveContainer width="100%" height={400}>
                 <LineChart>
@@ -530,23 +631,239 @@ function DashboardContent() {
                 </LineChart>
               </ResponsiveContainer>
               
-              {/* Strategy Comparison Stats */}
-              <div className="grid grid-cols-3 gap-4 mt-6">
-                {Object.entries(strategies || {}).map(([strategy, data]) => (
-                  <div key={strategy} className="text-center">
-                    <h4 className="text-white capitalize mb-2">{strategy} Method</h4>
-                    <p className="text-gray-400">Total Interest</p>
-                    <p className="text-white font-bold">
-                      ₹{data.totalInterest.toLocaleString(undefined, {
-                        maximumFractionDigits: 0
-                      })}
-                    </p>
-                    <p className="text-gray-400 mt-2">Time to Debt-Free</p>
-                    <p className="text-white font-bold">
-                      {data.data.length} months
+              {/* Strategy Comparison Stats - Redesigned with Interest Classification */}
+              <div className="mt-8 space-y-4">
+                {Object.entries(strategies || {})
+                  .sort(([stratA, dataA], [stratB, dataB]) => {
+                    // Sort by total interest (lowest first)
+                    return dataA.totalInterest - dataB.totalInterest;
+                  })
+                  .map(([strategy, data], index) => {
+                  const optimalStrategy = index === 0; // First strategy after sorting is optimal
+
+                  const comparisonData = !optimalStrategy ? {
+                    monthsDiff: data.data.length - (
+                      Object.values(strategies)
+                        .reduce((min, stratData) => 
+                          stratData.totalInterest < min.totalInterest ? stratData : min
+                        , {totalInterest: Infinity, data: {length: 0}})
+                        .data.length
+                    ),
+                    interestDiff: data.totalInterest - (
+                      Object.values(strategies)
+                        .reduce((min, stratData) => 
+                          stratData.totalInterest < min.totalInterest ? stratData : min
+                        , {totalInterest: Infinity})
+                        .totalInterest
+                    )
+                  } : null;
+
+                  const interestClassification = getInterestClassification(
+                    data.totalInterest,
+                    calculationData.userDetails.monthlySalary
+                  );
+
+                  return (
+                    <div 
+                      key={strategy}
+                      className={`p-6 rounded-lg border ${
+                        optimalStrategy 
+                          ? 'bg-green-500/10 border-green-500/20' 
+                          : 'bg-white/[0.03] border-white/10'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className={`text-lg font-semibold ${
+                              optimalStrategy ? 'text-green-400' : 'text-white'
+                            }`}>
+                              {strategy.charAt(0).toUpperCase() + strategy.slice(1)} Method
+                            </h4>
+                            {optimalStrategy && (
+                              <span className="text-sm px-2 py-0.5 bg-green-500/20 rounded-full text-green-400">
+                                Optimal Strategy
+                              </span>
+                            )}
+                            <span className={`text-sm px-2 py-0.5 ${interestClassification.bgColor} ${interestClassification.color} rounded-full`}>
+                              {interestClassification.level} Interest Burden
+                            </span>
+                          </div>
+                          <p className="text-gray-400 text-sm">
+                            {strategy === 'avalanche' && "Prioritizes high-interest debts first - typically saves the most money"}
+                            {strategy === 'snowball' && "Focuses on smallest debts first - builds momentum through quick wins"}
+                            {strategy === 'hybrid' && "Balances interest rates and loan sizes - can be optimal for mixed loan portfolios"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-gray-400 text-sm">Time to Debt-Free</p>
+                          <p className="text-white font-bold text-lg">
+                            {Math.floor(data.data.length / 12)} years {data.data.length % 12} months
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-400 text-sm">Total Interest</p>
+                          <p className={`font-bold text-lg ${interestClassification.color}`}>
+                            ₹{data.totalInterest.toLocaleString(undefined, {
+                              maximumFractionDigits: 0
+                            })}
+                          </p>
+                          <p className={`text-xs mt-1 ${interestClassification.color}`}>
+                            {((data.totalInterest / 12) / parseFloat(calculationData.userDetails.monthlySalary) * 100).toFixed(1)}% of monthly income
+                          </p>
+                        </div>
+                        
+                        {!optimalStrategy && comparisonData && (
+                          <>
+                            <div>
+                              <p className="text-gray-400 text-sm">Extra Time vs Optimal</p>
+                              <p className="text-red-400 font-bold text-lg">
+                                +{Math.floor(comparisonData.monthsDiff / 12)} years {comparisonData.monthsDiff % 12} months
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-sm">Additional Interest vs Optimal</p>
+                              <p className="text-red-400 font-bold text-lg">
+                                +₹{comparisonData.interestDiff.toLocaleString(undefined, {
+                                  maximumFractionDigits: 0
+                                })}
+                              </p>
+                            </div>
+                          </>
+                        )}
+                        
+                        {optimalStrategy && (
+                          <div className="col-span-2">
+                            <p className="text-gray-400 text-sm">Interest Classification</p>
+                            <p className={`text-sm ${interestClassification.color}`}>
+                              {interestClassification.description}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Early Payoff Impact */}
+            <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10 mb-8">
+              <h3 className="text-xl font-semibold text-white mb-4">Early Payoff Impact</h3>
+              <div className="mb-6">
+                <p className="text-gray-400 text-sm">
+                  See how paying a little extra each month can significantly reduce your loan duration and save money on interest.
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Payoff Time Comparison */}
+                <div>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={payoffScenarios}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                      <XAxis 
+                        dataKey="extraAmount" 
+                        stroke="#ffffff80"
+                        tickFormatter={(value) => `+₹${value.toLocaleString()}`}
+                      />
+                      <YAxis 
+                        stroke="#ffffff80"
+                        label={{ 
+                          value: 'Months to Debt-Free', 
+                          angle: -90, 
+                          position: 'insideCenter ',
+                          fill: '#ffffff80' 
+                        }}
+                      />
+                      <Tooltip
+                        formatter={(value, name) => [
+                          name === 'months' ? `${value} months` : `₹${value.toLocaleString()}`,
+                          name === 'months' ? 'Time to Debt-Free' : 'Extra Monthly Payment'
+                        ]}
+                        contentStyle={{ 
+                          backgroundColor: 'rgba(0,0,0,0.8)', 
+                          border: '1px solid rgba(255,255,255,0.1)' 
+                        }}
+                      />
+                      <Bar 
+                        dataKey="months" 
+                        fill="#8884d8"
+                        radius={[4, 4, 0, 0]}
+                      >
+                        {payoffScenarios.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`}
+                            fill={entry.extraAmount === 0 ? '#ef4444' : '#22c55e'}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Savings Breakdown */}
+                <div className="space-y-4">
+                  {payoffScenarios.map((scenario, index) => (
+                    <div 
+                      key={index}
+                      className={`p-4 rounded-lg ${
+                        scenario.extraAmount === 0 
+                          ? 'bg-red-500/10 border border-red-500/20' 
+                          : 'bg-green-500/10 border border-green-500/20'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-white font-medium">
+                          {scenario.extraAmount === 0 
+                            ? 'Current Plan' 
+                            : `+₹${scenario.extraAmount.toLocaleString()}/month`}
+                        </span>
+                        <span className={`text-sm ${
+                          scenario.extraAmount === 0 ? 'text-red-400' : 'text-green-400'
+                        }`}>
+                          {scenario.months} months
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-400">Total Interest</p>
+                          <p className="text-white">₹{scenario.totalInterestPaid.toLocaleString(undefined, {
+                            maximumFractionDigits: 0
+                          })}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-400">Potential Savings</p>
+                          <p className={scenario.extraAmount === 0 ? 'text-red-400' : 'text-green-400'}>
+                            {scenario.extraAmount === 0 ? '-' : 
+                              `₹${scenario.totalSaved.toLocaleString(undefined, {
+                                maximumFractionDigits: 0
+                              })}`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="text-blue-400 mt-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-blue-400 font-medium mb-1">Pro Tip</h4>
+                    <p className="text-gray-400 text-sm">
+                      Even a small increase in your monthly payment can significantly reduce your loan duration and save money on interest. Consider allocating any extra income or bonuses towards loan payments.
                     </p>
                   </div>
-                ))}
+                </div>
               </div>
             </div>
 
