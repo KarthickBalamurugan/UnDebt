@@ -476,7 +476,7 @@ export default function Dashboard() {
             </div>
 
             {/* Loans Section */}
-            <div className="space-y-6">
+            <div className="space-y-6 pb-28">
               <h2 className="text-2xl font-bold text-white mb-6">Loan Details</h2>
               {calculationData.loans.map((loan, index) => (
                 <div 
