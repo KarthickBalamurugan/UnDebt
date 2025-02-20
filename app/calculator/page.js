@@ -14,6 +14,8 @@ export default function CalculatorPage() {
     companyName: 'Tech Corp',
     workExperience: '5',
     numberOfLoans: '2', // Set to 2 loans for testing
+    aadharNumber: '123456789012',
+    panNumber: 'ABCDE1234F'
   });
 
   // Update initial loan forms with sample data
@@ -25,8 +27,7 @@ export default function CalculatorPage() {
       loanDuration: '240',
       minimumPayment: '20000',
       loanType: 'home',
-      aadharNumber: '123456789012',
-      panNumber: 'ABCDE1234F'
+      paymentDueDate: '5',
     },
     {
       debtName: 'Car Loan',
@@ -35,8 +36,7 @@ export default function CalculatorPage() {
       loanDuration: '60',
       minimumPayment: '12000',
       loanType: 'car',
-      aadharNumber: '987654321012',
-      panNumber: 'ZYXWV9876G'
+      paymentDueDate: '15',
     }
   ]);
 
@@ -72,7 +72,7 @@ export default function CalculatorPage() {
     });
   }, []);
 
-  // Add this validation function at the top of your component
+  // Update the validateForm function to check document numbers at user level
   const validateForm = (userDetails, loanForms) => {
     // Validate user details
     if (userDetails.monthlySalary <= 0) {
@@ -87,6 +87,18 @@ export default function CalculatorPage() {
 
     if (parseInt(userDetails.numberOfLoans) < 1 || parseInt(userDetails.numberOfLoans) > 10) {
       alert('Number of loans must be between 1 and 10');
+      return false;
+    }
+
+    // Validate Aadhar Number (12 digits)
+    if (!/^\d{12}$/.test(userDetails.aadharNumber)) {
+      alert('Please enter a valid 12-digit Aadhar number');
+      return false;
+    }
+
+    // Validate PAN Number (ABCDE1234F format)
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(userDetails.panNumber)) {
+      alert('Please enter a valid PAN number in format ABCDE1234F');
       return false;
     }
 
@@ -119,15 +131,10 @@ export default function CalculatorPage() {
         return false;
       }
 
-      // Validate Aadhar Number (12 digits)
-      if (!/^\d{12}$/.test(loan.aadharNumber)) {
-        alert(`Loan ${i + 1}: Please enter a valid 12-digit Aadhar number`);
-        return false;
-      }
-
-      // Validate PAN Number (ABCDE1234F format)
-      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(loan.panNumber)) {
-        alert(`Loan ${i + 1}: Please enter a valid PAN number in format ABCDE1234F`);
+      // Validate payment due date
+      const dueDate = parseInt(loan.paymentDueDate);
+      if (isNaN(dueDate) || dueDate < 1 || dueDate > 31) {
+        alert(`Loan ${i + 1}: Please enter a valid payment due date (1-31)`);
         return false;
       }
     }
@@ -135,37 +142,61 @@ export default function CalculatorPage() {
     return true;
   };
 
-  // Handle User Details Change
+  // Update the handleUserDetailsChange function for better document number validation
   const handleUserDetailsChange = (e) => {
     const { name, value } = e.target;
     
     // Validate number of loans
     if (name === 'numberOfLoans') {
-      if (value < 1) {
+      const numLoans = parseInt(value);
+      if (numLoans < 1) {
         alert('Number of loans must be at least 1');
         return;
       }
-      if (value > 10) {
+      if (numLoans > 10) {
         alert('Maximum 10 loans allowed');
         return;
       }
     }
 
     // Validate monthly salary
-    if (name === 'monthlySalary' && value < 0) {
+    if (name === 'monthlySalary' && parseFloat(value) < 0) {
       alert('Salary cannot be negative');
       return;
     }
 
     // Validate work experience
-    if (name === 'workExperience' && value < 0) {
+    if (name === 'workExperience' && parseFloat(value) < 0) {
       alert('Work experience cannot be negative');
       return;
     }
 
+    // Validate Aadhar number as user types
+    if (name === 'aadharNumber') {
+      if (!/^\d*$/.test(value)) {
+        alert('Aadhar number must contain only digits');
+        return;
+      }
+      if (value.length > 12) {
+        return; // Don't allow more than 12 digits
+      }
+    }
+
+    // Validate PAN number as user types
+    if (name === 'panNumber') {
+      const upperValue = value.toUpperCase();
+      if (upperValue.length <= 10 && !/^[A-Z]{0,5}[0-9]{0,4}[A-Z]?$/.test(upperValue)) {
+        alert('Invalid PAN number format');
+        return;
+      }
+      if (upperValue.length > 10) {
+        return; // Don't allow more than 10 characters
+      }
+    }
+
     setUserDetails(prev => ({
       ...prev,
-      [name]: value
+      [name]: name === 'panNumber' ? value.toUpperCase() : value
     }));
 
     // If number of loans changes, update loan forms
@@ -183,8 +214,7 @@ export default function CalculatorPage() {
               loanDuration: '',
               minimumPayment: '',
               loanType: 'personal',
-              aadharNumber: '',
-              panNumber: ''
+              paymentDueDate: '',
             });
           }
         } else {
@@ -386,6 +416,36 @@ export default function CalculatorPage() {
                     required
                   />
                 </div>
+
+                {/* Document Numbers Section */}
+                <div className="space-y-4 mt-6">
+                  <div>
+                    <label className="block text-gray-300 mb-2">Aadhar Number</label>
+                    <input
+                      type="text"
+                      name="aadharNumber"
+                      value={userDetails.aadharNumber}
+                      onChange={handleUserDetailsChange}
+                      placeholder="Enter 12-digit Aadhar number"
+                      maxLength="12"
+                      pattern="\d{12}"
+                      className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Format: 123456789012</p>
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 mb-2">PAN Number</label>
+                    <input
+                      type="text"
+                      name="panNumber"
+                      value={userDetails.panNumber}
+                      onChange={handleUserDetailsChange}
+                      placeholder="Enter 10-digit PAN number"
+                      className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white uppercase focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Format: ABCDE1234F</p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -478,36 +538,20 @@ export default function CalculatorPage() {
                     </select>
                   </div>
 
-                  {/* Document Numbers Section */}
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-gray-300 mb-2">Aadhar Number</label>
-                      <input
-                        type="text"
-                        name="aadharNumber"
-                        value={loan.aadharNumber}
-                        onChange={(e) => handleLoanFormChange(index, e)}
-                        placeholder="Enter 12-digit Aadhar number"
-                        maxLength="12"
-                        pattern="\d{12}"
-                        className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
-                      />
-                      <p className="text-xs text-gray-400 mt-1">Format: 123456789012</p>
-                    </div>
-                    <div>
-                      <label className="block text-gray-300 mb-2">PAN Number</label>
-                      <input
-                        type="text"
-                        name="panNumber"
-                        value={loan.panNumber}
-                        onChange={(e) => handleLoanFormChange(index, e)}
-                        placeholder="Enter 10-digit PAN number"
-                        // maxLength="10"
-                        // pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}" 
-                        className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white uppercase focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
-                      />
-                      <p className="text-xs text-gray-400 mt-1">Format: ABCDE1234F</p>
-                    </div>
+                  {/* Payment Due Date */}
+                  <div className="mt-6">
+                    <label className="block text-gray-300 mb-2">Payment Due Date</label>
+                    <input
+                      type="number"
+                      name="paymentDueDate"
+                      value={loan.paymentDueDate}
+                      onChange={(e) => handleLoanFormChange(index, e)}
+                      min="1"
+                      max="31"
+                      placeholder="Day of month (1-31)"
+                      className="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-white focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Enter the day of month when payment is due</p>
                   </div>
                 </div>
               </div>

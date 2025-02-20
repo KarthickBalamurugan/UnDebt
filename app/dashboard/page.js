@@ -103,6 +103,90 @@ export default function Dashboard() {
     };
   };
 
+  // Calculate repayment strategies
+  const calculateRepaymentStrategies = (loans, monthlyBudget) => {
+    // Helper function to calculate monthly interest
+    const calculateMonthlyInterest = (principal, rate) => {
+      return principal * (rate / 100 / 12);
+    };
+
+    // Deep clone loans array for each strategy
+    const getLoansClone = () => loans.map(loan => ({
+      ...loan,
+      currentBalance: parseFloat(loan.principalAmount),
+      rate: parseFloat(loan.interestRate),
+      minimumPayment: parseFloat(loan.minimumPayment)
+    }));
+
+    const totalMinPayment = loans.reduce((sum, loan) => sum + parseFloat(loan.minimumPayment), 0);
+    const extraPayment = monthlyBudget - totalMinPayment;
+
+    // Calculate strategies
+    const strategies = {
+      avalanche: { data: [], totalInterest: 0 },
+      snowball: { data: [], totalInterest: 0 },
+      hybrid: { data: [], totalInterest: 0 }
+    };
+
+    // Simulate each strategy
+    Object.keys(strategies).forEach(strategy => {
+      const loansClone = getLoansClone();
+      let month = 0;
+      let totalBalance = loansClone.reduce((sum, loan) => sum + loan.currentBalance, 0);
+      
+      while (totalBalance > 0 && month < 360) { // 30 years max
+        let monthlyData = {
+          month,
+          totalBalance
+        };
+
+        // Apply minimum payments and calculate interest
+        loansClone.forEach(loan => {
+          if (loan.currentBalance > 0) {
+            const interest = calculateMonthlyInterest(loan.currentBalance, loan.rate);
+            strategies[strategy].totalInterest += interest;
+            loan.currentBalance += interest;
+            
+            const payment = Math.min(loan.minimumPayment, loan.currentBalance);
+            loan.currentBalance -= payment;
+          }
+        });
+
+        // Apply extra payment according to strategy
+        if (extraPayment > 0) {
+          let remainingExtra = extraPayment;
+          const activeLoansSorted = loansClone
+            .filter(loan => loan.currentBalance > 0)
+            .sort((a, b) => {
+              switch(strategy) {
+                case 'avalanche':
+                  return b.rate - a.rate;
+                case 'snowball':
+                  return a.currentBalance - b.currentBalance;
+                case 'hybrid':
+                  return (b.rate * b.currentBalance) - (a.rate * a.currentBalance);
+                default:
+                  return 0;
+              }
+            });
+
+          if (activeLoansSorted.length > 0) {
+            const targetLoan = activeLoansSorted[0];
+            const extraPaymentApplied = Math.min(remainingExtra, targetLoan.currentBalance);
+            targetLoan.currentBalance -= extraPaymentApplied;
+          }
+        }
+
+        totalBalance = loansClone.reduce((sum, loan) => sum + loan.currentBalance, 0);
+        monthlyData.totalBalance = totalBalance;
+        strategies[strategy].data.push(monthlyData);
+        month++;
+      }
+    });
+
+    return strategies;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A0118]">
@@ -136,6 +220,16 @@ export default function Dashboard() {
 
   const metrics = calculationData ? 
     calculateMetrics(calculationData.loans, calculationData.userDetails.monthlySalary) : 
+    null;
+
+  // Calculate monthly budget
+  const monthlyBudget = calculationData ? 
+    parseFloat(calculationData.userDetails.monthlySalary) * 0.5 : // Assuming 50% of salary for debt repayment
+    0;
+
+  // Calculate repayment strategies
+  const strategies = calculationData ?
+    calculateRepaymentStrategies(calculationData.loans, monthlyBudget) :
     null;
 
   return (
@@ -311,6 +405,73 @@ export default function Dashboard() {
                     <Bar dataKey="totalInterest" stackId="a" fill="#ff8042" name="Total Interest" />
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Debt Repayment Strategies Comparison */}
+            <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10 mb-8">
+              <h3 className="text-xl font-semibold text-white mb-4">Debt Repayment Strategy Comparison</h3>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="#ffffff80"
+                    label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
+                  />
+                  <YAxis 
+                    stroke="#ffffff80"
+                    label={{ value: 'Balance (₹)', angle: -90, position: 'insideLeft' }}
+                  />
+                  <Tooltip 
+                    formatter={(value) => `₹${value.toLocaleString()}`}
+                    contentStyle={{ background: '#1a1a2e' }}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    data={strategies?.avalanche.data}
+                    dataKey="totalBalance"
+                    stroke="#ff4d4d"
+                    name="Avalanche Method"
+                    strokeWidth={2}
+                  />
+                  <Line
+                    type="monotone"
+                    data={strategies?.snowball.data}
+                    dataKey="totalBalance"
+                    stroke="#4caf50"
+                    name="Snowball Method"
+                    strokeWidth={2}
+                  />
+                  <Line
+                    type="monotone"
+                    data={strategies?.hybrid.data}
+                    dataKey="totalBalance"
+                    stroke="#ffd700"
+                    name="Hybrid Method"
+                    strokeWidth={2}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+              
+              {/* Strategy Comparison Stats */}
+              <div className="grid grid-cols-3 gap-4 mt-6">
+                {Object.entries(strategies || {}).map(([strategy, data]) => (
+                  <div key={strategy} className="text-center">
+                    <h4 className="text-white capitalize mb-2">{strategy} Method</h4>
+                    <p className="text-gray-400">Total Interest</p>
+                    <p className="text-white font-bold">
+                      ₹{data.totalInterest.toLocaleString(undefined, {
+                        maximumFractionDigits: 0
+                      })}
+                    </p>
+                    <p className="text-gray-400 mt-2">Time to Debt-Free</p>
+                    <p className="text-white font-bold">
+                      {data.data.length} months
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
 
