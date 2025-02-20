@@ -300,23 +300,60 @@ function DashboardContent() {
                 </ResponsiveContainer>
               </div>
 
-              {/* Loan Balance Progress Chart */}
+              {/* Balance Progress - Redesigned */}
               <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10">
                 <h3 className="text-xl font-semibold text-white mb-4">Balance Progress</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={monthlyPaymentsData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                    <defs>
+                      <linearGradient id="totalBalance" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                     <XAxis 
                       dataKey="month" 
-                      stroke="#ffffff80"
-                      label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
+                      stroke="#ffffff60"
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 12 }}
+                      label={{ 
+                        value: 'Months', 
+                        position: 'insideBottom', 
+                        offset: -5,
+                        fill: '#ffffff80'
+                      }}
                     />
                     <YAxis 
-                      stroke="#ffffff80"
-                      label={{ value: 'Balance (₹)', angle: -90, position: 'insideLeft' }}
+                      stroke="#ffffff60"
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 12 }}
+                      label={{ 
+                        value: 'Balance (₹)', 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        fill: '#ffffff80'
+                      }}
                     />
-                    <Tooltip />
-                    <Legend />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(0,0,0,0.8)', 
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '8px'
+                      }}
+                      labelStyle={{ color: '#ffffff' }}
+                      itemStyle={{ color: '#ffffff' }}
+                    />
+                    <Legend 
+                      verticalAlign="top"
+                      height={36}
+                      wrapperStyle={{
+                        paddingBottom: '20px',
+                        opacity: 0.8
+                      }}
+                    />
                     {calculationData.loans.map((loan, index) => (
                       <Line
                         key={index}
@@ -324,14 +361,20 @@ function DashboardContent() {
                         dataKey={`loan${index + 1}`}
                         stroke={COLORS[index % COLORS.length]}
                         name={loan.debtName}
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 6 }}
                       />
                     ))}
                     <Line
                       type="monotone"
                       dataKey="totalBalance"
                       stroke="#fff"
+                      strokeWidth={3}
                       name="Total Balance"
-                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 8 }}
+                      fill="url(#totalBalance)"
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -339,86 +382,105 @@ function DashboardContent() {
             </div>
 
             {/* New Visualizations Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-              {/* Monthly Payment Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-8 mb-8">
+              {/* Debt-to-Income Ratio - Updated colors */}
               <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10">
-                <h3 className="text-xl font-semibold text-white mb-4">Monthly Payment Breakdown</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={metrics.loanMetrics}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-                    <XAxis dataKey="name" stroke="#ffffff80" />
-                    <YAxis stroke="#ffffff80" />
-                    <Tooltip 
-                      formatter={(value) => `₹${value.toLocaleString()}`}
-                      contentStyle={{ background: '#1a1a2e' }}
+                <h3 className="text-xl font-semibold text-white mb-4">Debt-to-Income Ratio</h3>
+                <div className="relative pt-4">
+                  <div className="flex justify-between mb-2">
+                    <span className={metrics.debtToIncomeRatio <= 30 ? 'text-green-400 font-semibold' : 'text-gray-400'}>Good</span>
+                    <span className={metrics.debtToIncomeRatio > 30 && metrics.debtToIncomeRatio <= 40 ? 'text-yellow-400 font-semibold' : 'text-gray-400'}>Warning</span>
+                    <span className={metrics.debtToIncomeRatio > 40 ? 'text-red-400 font-semibold' : 'text-gray-400'}>Critical</span>
+                  </div>
+                  <div className="h-4 bg-white/10 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full transition-all duration-500 rounded-full"
+                      style={{ 
+                        width: `${Math.min(metrics.debtToIncomeRatio, 100)}%`,
+                        backgroundColor: metrics.debtToIncomeRatio > 40 ? '#ef4444' :
+                                        metrics.debtToIncomeRatio > 30 ? '#eab308' : '#22c55e',
+                        boxShadow: `0 0 20px ${
+                          metrics.debtToIncomeRatio > 40 ? 'rgba(239, 68, 68, 0.5)' :
+                          metrics.debtToIncomeRatio > 30 ? 'rgba(234, 179, 8, 0.5)' : 'rgba(34, 197, 94, 0.5)'
+                        }`
+                      }}
                     />
-                    <Legend />
-                    <Bar dataKey="monthlyPayment" fill="#8884d8" name="Monthly Payment" />
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="mt-4 text-center text-white">
-                  <p className="text-gray-400">Total Monthly Payment</p>
-                  <p className="text-2xl font-bold">₹{metrics.totalMonthlyPayment.toLocaleString()}</p>
+                  </div>
+                  <div className="flex justify-between mt-1 text-xs text-gray-400">
+                    <span>0%</span>
+                    <span>30%</span>
+                    <span>40%</span>
+                    <span>100%</span>
+                  </div>
+                  <div className="mt-6 text-center">
+                    <p className="text-4xl font-bold" style={{
+                      color: metrics.debtToIncomeRatio > 40 ? '#ef4444' :
+                             metrics.debtToIncomeRatio > 30 ? '#eab308' : '#22c55e'
+                    }}>
+                      {metrics.debtToIncomeRatio.toFixed(1)}%
+                    </p>
+                    <p className="mt-2" style={{
+                      color: metrics.debtToIncomeRatio > 40 ? '#fca5a5' :
+                             metrics.debtToIncomeRatio > 30 ? '#fde047' : '#86efac'
+                    }}>
+                      {metrics.debtToIncomeRatio > 40 ? 'High Risk - Consider debt consolidation' :
+                       metrics.debtToIncomeRatio > 30 ? 'Moderate Risk - Monitor spending' : 'Healthy - Keep it up!'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {/* Debt-to-Income Ratio Gauge */}
+              {/* Monthly Payment Distribution - New Bar Graph */}
               <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10">
-                <h3 className="text-xl font-semibold text-white mb-4">Debt-to-Income Ratio</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <RadialBarChart 
-                    innerRadius="60%" 
-                    outerRadius="100%"
-                    data={[{
-                      name: 'DTI Ratio',
-                      value: Math.min(metrics.debtToIncomeRatio, 100),
-                      fill: metrics.debtToIncomeRatio > 40 ? '#ff4d4d' : 
-                             metrics.debtToIncomeRatio > 30 ? '#ffd700' : '#4caf50'
-                    }]}
-                    startAngle={180}
-                    endAngle={0}
-                  >
-                    <RadialBar
-                      background
-                      dataKey="value"
-                      cornerRadius={30}
-                    />
-                    <Legend 
-                      iconSize={0}
-                      content={() => (
-                        <div className="text-center text-white mt-4">
-                          <p className="text-3xl font-bold">
-                            {metrics.debtToIncomeRatio.toFixed(1)}%
-                          </p>
-                          <p className="text-gray-400 mt-2">
-                            {metrics.debtToIncomeRatio > 40 ? 'High Risk' :
-                             metrics.debtToIncomeRatio > 30 ? 'Moderate Risk' : 'Healthy'}
-                          </p>
-                        </div>
-                      )}
-                    />
-                  </RadialBarChart>
-                </ResponsiveContainer>
+                <h3 className="text-xl font-semibold text-white mb-4">Payment Distribution</h3>
+                <div className="space-y-4">
+                  {metrics.loanMetrics.map((loan, index) => (
+                    <div key={index}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-white">{loan.name}</span>
+                        <span className="text-gray-400">₹{loan.monthlyPayment.toLocaleString()}</span>
+                      </div>
+                      <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${loan.paymentPercentage}%`,
+                            backgroundColor: COLORS[index % COLORS.length]
+                          }}
+                        />
+                      </div>
+                      <div className="text-right text-xs text-gray-400 mt-1">
+                        {loan.paymentPercentage.toFixed(1)}% of income
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-4 border-t border-white/10 mt-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white">Total Monthly Payments</span>
+                      <span className="text-gray-400">₹{metrics.totalMonthlyPayment.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
+            </div>
 
-              {/* Interest vs Principal Comparison */}
-              <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10 md:col-span-2">
-                <h3 className="text-xl font-semibold text-white mb-4">Interest vs Principal</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={metrics.loanMetrics}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-                    <XAxis dataKey="name" stroke="#ffffff80" />
-                    <YAxis stroke="#ffffff80" />
-                    <Tooltip 
-                      formatter={(value) => `₹${value.toLocaleString()}`}
-                      contentStyle={{ background: '#1a1a2e' }}
-                    />
-                    <Legend />
-                    <Bar dataKey="principal" stackId="a" fill="#82ca9d" name="Principal" />
-                    <Bar dataKey="totalInterest" stackId="a" fill="#ff8042" name="Total Interest" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+            {/* Interest vs Principal Comparison */}
+            <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 border border-white/10 md:col-span-2">
+              <h3 className="text-xl font-semibold text-white mb-4">Interest vs Principal</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={metrics.loanMetrics}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                  <XAxis dataKey="name" stroke="#ffffff80" />
+                  <YAxis stroke="#ffffff80" />
+                  <Tooltip 
+                    formatter={(value) => `₹${value.toLocaleString()}`}
+                    contentStyle={{ background: '#1a1a2e' }}
+                  />
+                  <Legend />
+                  <Bar dataKey="principal" stackId="a" fill="#82ca9d" name="Principal" />
+                  <Bar dataKey="totalInterest" stackId="a" fill="#ff8042" name="Total Interest" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
 
             {/* Debt Repayment Strategies Comparison */}
