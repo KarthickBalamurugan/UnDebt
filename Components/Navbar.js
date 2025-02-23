@@ -11,7 +11,7 @@ export default function Navbar() {
   const logoRef = useRef(null);
   const profileRef = useRef(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
+  console.log(session)
   useEffect(() => {
     // Initial animation
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
