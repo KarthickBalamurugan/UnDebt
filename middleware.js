@@ -1,19 +1,10 @@
-import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-
-export default withAuth({
-  pages: {
-    signIn: "/login", // Redirect users to login page
-  },
-});
 
 export function middleware(request) {
   const { pathname } = request.nextUrl;
-  console.log('Middleware running on path:', pathname);
-  console.log('Cookies:', request.cookies.toString());
   
   // Public paths that don't require authentication
-  const publicPaths = ['/', '/login', '/signup'];
+  const publicPaths = ['/login', '/signup'];
   const isPublicPath = publicPaths.includes(pathname);
 
   const token = request.cookies.get('token')?.value || '';
@@ -31,7 +22,6 @@ export function middleware(request) {
   return NextResponse.next();
 }
 
-// Configure matcher for middleware
 export const config = {
   matcher: [
     /*
