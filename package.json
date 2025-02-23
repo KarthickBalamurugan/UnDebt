@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.2.2",
+    "@sentry/nextjs": "^9.1.0",
     "@studio-freight/lenis": "^1.0.42",
     "axios": "^1.7.9",
     "chart.js": "^4.4.8",
