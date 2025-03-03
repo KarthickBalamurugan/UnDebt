@@ -10,7 +10,7 @@ export default function CalculatorPage() {
   const [userDetails, setUserDetails] = useState({
     fullName: 'John Doe',
     occupation: 'Software Engineer',
-    monthlySalary: '75000',
+    monthlySalary: '150000',
     companyName: 'Tech Corp',
     workExperience: '5',
     numberOfLoans: '2', // Set to 2 loans for testing
@@ -21,20 +21,20 @@ export default function CalculatorPage() {
   // Update initial loan forms with sample data
   const [loanForms, setLoanForms] = useState([
     {
-      debtName: 'Home Loan',
-      principalAmount: '2000000',
+      debtName: 'Personal Loan',
+      principalAmount: '50000',
       interestRate: '8.5',
-      loanDuration: '240',
-      minimumPayment: '20000',
+      loanDuration: '12',
+      minimumPayment: '5000',
       loanType: 'home',
       paymentDueDate: '5',
     },
     {
       debtName: 'Car Loan',
-      principalAmount: '500000',
+      principalAmount: '100000',
       interestRate: '10.5',
-      loanDuration: '60',
-      minimumPayment: '12000',
+      loanDuration: '24',
+      minimumPayment: '7000',
       loanType: 'car',
       paymentDueDate: '15',
     }
